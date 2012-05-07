@@ -43,7 +43,7 @@ Licensed under the Apache 2.0 License.
             // get the file path relative to the input less file/directory
             var currDir = fso.folderExists(input) ? input : fso.getParentFolderName(input);
             var filename = fso.BuildPath(currDir, this.url);
-            
+
             //WScript.StdErr.WriteLine("XHR.send " + filename);
             
             // Little hack so *.less will resolve to *.less.css also. Helps with Visual Studio 
@@ -69,7 +69,11 @@ Licensed under the Apache 2.0 License.
     var document = {
         _dummyElement: {
             childNodes: [], 
-            appendChild: function(){},
+            appendChild: function(){
+            },
+            parentNode: {
+                removeChild: function () {}
+            },
             style: {}
         },
         getElementsByTagName: function(){ return []; },
@@ -130,12 +134,34 @@ Licensed under the Apache 2.0 License.
         return files;
     }
 
+    function exitWithError(err) {
+
+        var i;
+
+        if (args['vs']) {
+            WScript.StdErr.WriteLine(
+                (err.filename || 'unknown file') + "(" + (err.line || 0) + "," + (err.column || 0) + "): error: " + (err.message || ' ').replace(/\n/g, '\t')
+            );
+        } else {
+            for (i in err) {
+                if (err[i]) {
+                    WScript.StdErr.WriteLine("  " + i + ': ' + err[i]);
+                }
+            }
+        }
+        WScript.Quit(2);
+    }
+
     function convert(input, output) {
         if (!input) {
             WScript.StdErr.WriteLine("lessc.wsf: no input files");
             WScript.StdErr.WriteLine("Usage:");
             WScript.StdErr.WriteLine("  Single file: cscript //nologo lessc.wsf input.less [output.css] [-compress]");
             WScript.StdErr.WriteLine("  Directory:   cscript //nologo lessc.wsf inputdir outputdir [-compress]");
+            WScript.StdErr.WriteLine("");
+            WScript.StdErr.WriteLine("Options:");
+            WScript.StdErr.WriteLine("  --vs: Use Visual Studio compatible error messages");
+
             WScript.Quit(1);
         }
 
@@ -158,13 +184,7 @@ Licensed under the Apache 2.0 License.
             parser.parse(data, function (err, tree) {
 
                 if (err) {
-                    WScript.StdErr.WriteLine("ERR: ");
-                    for (var i in err) {
-                        if (err[i]) {
-                            WScript.StdErr.WriteLine("  " + i + ': ' + err[i]);
-                        }
-                    }
-                    WScript.Quit(2);
+                    exitWithError(err);
                 }
                 else {
                     var css = tree.toCSS({
@@ -201,13 +221,23 @@ Licensed under the Apache 2.0 License.
 
         // Sometimes less will return errors inside the fake HTML element
         if (document._dummyElement.innerHTML && document._dummyElement.innerHTML.match(/Syntax Error/i)) {
-            var s = document._dummyElement.innerHTML;
+            var m, err, s = document._dummyElement.innerHTML;
             s = s.replace(/<[^>]+(\/?)>/g, function (m) { return m.indexOf('/') > 0 && m !== '</label>' ? "\n" : '' });
-            s = s.replace(/\n+/g, '\n');
+            m = s.match(/([\s\S]+)[\n\s]+in[\n\s]+(\S+\.less)[\n\s]+on[\n\s]+line[\n\s]+(\d+),.*column[\n\s]+(\d+):[\n\s]+([\s\S]*)$/);
 
-            WScript.StdErr.WriteLine("ERR: ");
-            WScript.StdErr.WriteLine(s);
-            WScript.Quit(2);
+            if (m) {
+                err = {
+                    message: m[1],
+                    filename: m[2],
+                    line: m[3],
+                    column: m[4],
+                    extract: m[5].split(/\n+/g)
+                };
+            } else {
+                err = { message: s.replace(/\n+/g, '\n') };
+            }
+
+            exitWithError(err);
         }
     }
 </script>
