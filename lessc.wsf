@@ -220,7 +220,7 @@ Licensed under the Apache 2.0 License.
         }
 
         // Sometimes less will return errors inside the fake HTML element
-        if (document._dummyElement.innerHTML && document._dummyElement.innerHTML.match(/Syntax Error|Couldn't load/i)) {
+        if (document._dummyElement.innerHTML && document._dummyElement.innerHTML.match(/Syntax Error|Couldn't load|expected/i)) {
             var m, err, s = document._dummyElement.innerHTML;
             s = s.replace(/<[^>]+(\/?)>/g, function (m) { return m.indexOf('/') > 0 && m !== '</label>' ? "\n" : '' });
             m = s.match(/([\s\S]+)[\n\s]+in[\n\s]+(\S+\.less)[\n\s]+on[\n\s]+line[\n\s]+(\d+),.*column[\n\s]+(\d+):[\n\s]+([\s\S]*)$/);
