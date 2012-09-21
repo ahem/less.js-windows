@@ -763,7 +763,7 @@ less.Parser = function Parser(env) {
 
                     if (input.charAt(i) !== 'u' || !$(/^url\(/)) return;
                     value = $(this.entities.quoted)  || $(this.entities.variable) ||
-                            $(this.entities.dataURI) || $(/^[-\w%@$\/.&=:;#+?~]+/) || "";
+                            $(this.entities.dataURI) || $(/^(?:[-\w%@$\/.&=:;#+?~]|[^\x00-\x80])+/) || "";
 
                     expect(')');
 
